@@ -1,3 +1,4 @@
+import os
 from typing import Union, Tuple, List, Optional, Dict
 import cv2
 import numpy as np
@@ -18,7 +19,7 @@ PLATE_HEIGHT_PADDING = 1.5
 MIN_PLATE_RATIO = 3
 MAX_PLATE_RATIO = 10
 
-def resize(img: np.ndarray, size: Union[Tuple[int, int], int]) -> np.ndarray:
+def resize(img: np.ndarray, size: Union[Tuple[int, int], int], is_updample: Optional[bool] = False) -> np.ndarray:
     height, width, channel = img.shape
 
     if isinstance(size, int):
@@ -28,7 +29,7 @@ def resize(img: np.ndarray, size: Union[Tuple[int, int], int]) -> np.ndarray:
     elif isinstance(size, tuple):
         dsize = size
 
-    return cv2.resize(img, dsize=dsize, interpolation=cv2.INTER_AREA)
+    return cv2.resize(img, dsize=dsize, interpolation=cv2.INTER_AREA) if not is_updample else cv2.resize(img, dsize=dsize, interpolation=cv2.INTER_LINEAR)
 
 
 def get_blurred_img(img: np.ndarray) -> np.ndarray:
@@ -229,9 +230,41 @@ def find_roi(img_thresh: np.ndarray) -> List[Dict]:
     return plate_infos
 
 
+def convert_contour(contours: List[Dict], imgsz: Tuple[int, int], target_imgsz: Tuple[int, int], is_upsample: Optional[bool] = True) -> List[Dict]:
+    if not is_upsample:
+        raise NotImplemented
+
+    else:
+        assert imgsz[0] <= target_imgsz[0] and imgsz[1] <= target_imgsz[1]
+        ratio_height, ratio_width = target_imgsz[1] / imgsz[1], target_imgsz[0] / imgsz[0]
+
+        for contour in contours:
+            contour["x"] = int(contour["x"] * ratio_width)
+            contour["y"] = int(contour["y"] * ratio_height)
+            contour["w"] = int(contour["w"] * ratio_width)
+            contour["h"] = int(contour["h"] * ratio_height)
+
+    return contours
+
+
 if __name__ == "__main__":
-    img = cv2.imread("../images/2016_09_12_23473_1527685121T23473S05M2018Y215841E811.jpg")
-    img = resize(img, 720)
-    img = get_blurred_img(img)
-    img = get_thresh_img(img, mode=1)
-    contour = find_roi(img)
+    img_list = os.listdir("../images")
+
+    for fname in img_list:
+        img_ori = cv2.imread(f"../images/{fname}")
+        height_ori, width_ori = img_ori.shape[:2]
+        img = resize(img_ori, 720)
+        height, width = img.shape[:2]
+        img1 = get_blurred_img(img)
+        img1 = get_thresh_img(img1, mode=1)
+        contours = find_roi(img1)
+        contours_resized = convert_contour(contours, imgsz=(width, height), target_imgsz=(width_ori, height_ori), is_upsample=True)
+
+        if contours_resized:
+            for contour in contours_resized:
+                top_left: Tuple[int, int] = (contour["x"], contour["y"])
+                bottom_right: Tuple[int, int] = (contour["x"] + contour["w"], contour["y"] + contour["h"])
+                img_ori = cv2.rectangle(img_ori, top_left, bottom_right, (0, 0, 0), 5)
+
+        plt.imshow(img_ori)
+        plt.show()
