@@ -1,8 +1,22 @@
-from typing import Union, Tuple, List, Optional
+from typing import Union, Tuple, List, Optional, Dict
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
+
+MIN_AREA = 80
+MIN_WIDTH, MIN_HEIGHT = 2, 8
+MIN_RATIO, MAX_RATIO = 0.25, 1.0
+MAX_DIAG_MULTIPLIER = 5
+MAX_ANGLE_DIFF = 12.0
+MAX_AREA_DIFF = 0.5
+MAX_WIDTH_DIFF = 0.8
+MAX_HEIGHT_DIFF = 0.2
+MIN_N_MATCHED = 3
+PLATE_WIDTH_PADDING = 1.3
+PLATE_HEIGHT_PADDING = 1.5
+MIN_PLATE_RATIO = 3
+MAX_PLATE_RATIO = 10
 
 def resize(img: np.ndarray, size: Union[Tuple[int, int], int]) -> np.ndarray:
     height, width, channel = img.shape
@@ -53,35 +67,15 @@ def get_thresh_img(img: np.ndarray, mode: Optional[int] = 1) -> np.ndarray:
     return img_thresh
 
 
-def find_roi(img_ori: np.ndarray, imgsz: Union[Tuple[int, int], int], IMG_SHOW_OPT: bool = False):
-    plt.style.use("dark_background")
-
-    img = resize(img_ori, imgsz)
-    height, width, channel = img.shape
-
-    img_blurred = get_blurred_img(img)
-    img_thresh = get_thresh_img(img_blurred, 1)
-
+def find_roi(img_thresh: np.ndarray) -> List[Dict]:
     contours, _ = cv2.findContours(
         img_thresh, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_SIMPLE
     )
-
-    temp_result = np.zeros((height, width, channel), dtype=np.uint8)
-
-    cv2.drawContours(temp_result, contours=contours, contourIdx=-1, color=(255, 255, 255))
-
-    temp_result = np.zeros((height, width, channel), dtype=np.uint8)
-
+    height, width = img_thresh.shape[:2]
     contours_dict = []
 
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
-
-        if IMG_SHOW_OPT:
-            cv2.rectangle(
-                temp_result, pt1=(x, y), pt2=(x + w, y + h), color=(255, 255, 255), thickness=2
-            )
-
         contours_dict.append(
             {
                 "contour": contour,
@@ -94,51 +88,22 @@ def find_roi(img_ori: np.ndarray, imgsz: Union[Tuple[int, int], int], IMG_SHOW_O
             }
         )
 
-    if IMG_SHOW_OPT:
-        plt.figure(figsize=(12, 10))
-        plt.imshow(temp_result, cmap="gray")
-
-    MIN_AREA = 80
-    MIN_WIDTH, MIN_HEIGHT = 2, 8
-    MIN_RATIO, MAX_RATIO = 0.25, 1.0
-
     possible_contours = []
-
     cnt = 0
+
     for d in contours_dict:
         area = d["w"] * d["h"]
         ratio = d["w"] / d["h"]
 
         if (
-            area > MIN_AREA
-            and d["w"] > MIN_WIDTH
-            and d["h"] > MIN_HEIGHT
-            and MIN_RATIO < ratio < MAX_RATIO
+                area > MIN_AREA
+                and d["w"] > MIN_WIDTH
+                and d["h"] > MIN_HEIGHT
+                and MIN_RATIO < ratio < MAX_RATIO
         ):
             d["idx"] = cnt
             cnt += 1
             possible_contours.append(d)
-
-    temp_result = np.zeros((height, width, channel), dtype=np.uint8)
-
-    for d in possible_contours:
-        cv2.rectangle(
-            temp_result,
-            pt1=(d["x"], d["y"]),
-            pt2=(d["x"] + d["w"], d["y"] + d["h"]),
-            color=(255, 255, 255),
-            thickness=2,
-        )
-
-    plt.figure(figsize=(12, 10))
-    plt.imshow(temp_result, cmap="gray")
-
-    MAX_DIAG_MULTIPLIER = 5
-    MAX_ANGLE_DIFF = 12.0
-    MAX_AREA_DIFF = 0.5
-    MAX_WIDTH_DIFF = 0.8
-    MAX_HEIGHT_DIFF = 0.2
-    MIN_N_MATCHED = 3
 
     def find_chars(contour_list):
         matched_result_idx = []
@@ -198,34 +163,15 @@ def find_roi(img_ori: np.ndarray, imgsz: Union[Tuple[int, int], int], IMG_SHOW_O
         return matched_result_idx
 
     result_idx = find_chars(possible_contours)
-
     matched_result = []
+
     for idx_list in result_idx:
         matched_result.append(np.take(possible_contours, idx_list))
-
-    temp_result = np.zeros((height, width, channel), dtype=np.uint8)
-
-    for r in matched_result:
-        for d in r:
-            cv2.rectangle(
-                temp_result,
-                pt1=(d["x"], d["y"]),
-                pt2=(d["x"] + d["w"], d["y"] + d["h"]),
-                color=(255, 255, 255),
-                thickness=2,
-            )
-
-    plt.figure(figsize=(12, 10))
-    plt.imshow(temp_result, cmap="gray")
-
-    PLATE_WIDTH_PADDING = 1.3
-    PLATE_HEIGHT_PADDING = 1.5
-    MIN_PLATE_RATIO = 3
-    MAX_PLATE_RATIO = 10
 
     plate_imgs = []
     plate_infos = []
 
+    fig_results = plt.figure(figsize=(12, 10))
     for i, matched_chars in enumerate(matched_result):
         sorted_chars = sorted(matched_chars, key=lambda x: x["cx"])
 
@@ -233,8 +179,8 @@ def find_roi(img_ori: np.ndarray, imgsz: Union[Tuple[int, int], int], IMG_SHOW_O
         plate_cy = (sorted_chars[0]["cy"] + sorted_chars[-1]["cy"]) / 2
 
         plate_width = (
-            sorted_chars[-1]["x"] + sorted_chars[-1]["w"] - sorted_chars[0]["x"]
-        ) * PLATE_WIDTH_PADDING
+                              sorted_chars[-1]["x"] + sorted_chars[-1]["w"] - sorted_chars[0]["x"]
+                      ) * PLATE_WIDTH_PADDING
 
         sum_height = 0
         for d in sorted_chars:
@@ -263,10 +209,10 @@ def find_roi(img_ori: np.ndarray, imgsz: Union[Tuple[int, int], int], IMG_SHOW_O
         )
 
         if (
-            img_cropped.shape[1] / img_cropped.shape[0] < MIN_PLATE_RATIO
-            or img_cropped.shape[1] / img_cropped.shape[0]
-            < MIN_PLATE_RATIO
-            > MAX_PLATE_RATIO
+                img_cropped.shape[1] / img_cropped.shape[0] < MIN_PLATE_RATIO
+                or img_cropped.shape[1] / img_cropped.shape[0]
+                < MIN_PLATE_RATIO
+                > MAX_PLATE_RATIO
         ):
             continue
 
@@ -280,6 +226,12 @@ def find_roi(img_ori: np.ndarray, imgsz: Union[Tuple[int, int], int], IMG_SHOW_O
             }
         )
 
-        plt.subplot(len(matched_result), 1, i + 1)
-        plt.imshow(img_cropped, cmap="gray")
-    plt.show()
+    return plate_infos
+
+
+if __name__ == "__main__":
+    img = cv2.imread("../images/2016_09_12_23473_1527685121T23473S05M2018Y215841E811.jpg")
+    img = resize(img, 720)
+    img = get_blurred_img(img)
+    img = get_thresh_img(img, mode=1)
+    contour = find_roi(img)

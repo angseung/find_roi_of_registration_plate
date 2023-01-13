@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import PIL
+from utils.get_roi import resize, find_roi, get_thresh_img, get_blurred_img
 
 plt.style.use("dark_background")
 target_pic_size = 720
@@ -14,16 +15,18 @@ if __name__ == "__main__":
         # img_ori = cv2.imread("Test.jpeg")
         # img_ori = cv2.imread("2018_04_16_73837_1527582857T73837S05M2018Y173417E320.jpg")
         img_ori = cv2.imread(f"./images/{img_name}")
+
+        """resize"""
         height, width, channel = img_ori.shape
         ratio = height / width if height > width else width / height
         dsize = (int(target_pic_size * ratio), target_pic_size) if width > height else (target_pic_size, int(target_pic_size * ratio))
         img = cv2.resize(img_ori, dsize=dsize, interpolation=cv2.INTER_AREA)
         height, width, channel = img.shape
 
-
+        """get_blurred_img"""
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        plt.figure(figsize=(12, 10))
-        plt.imshow(gray, cmap="gray")
+        # fig_gray = plt.figure(figsize=(12, 10))
+        # plt.imshow(gray, cmap="gray")
 
         # Morphological Transformation (https://dsbook.tistory.com/203)
         structuringElement = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
@@ -40,6 +43,7 @@ if __name__ == "__main__":
         # ret, binary = cv2.threshold(img_blurred, 127, 255, cv2.THRESH_BINARY)
         # img_thresh = cv2.bitwise_not(binary)
 
+        """get_thresh_img"""
         # mode 2. adaptive threshold
         img_thresh = cv2.adaptiveThreshold(
             img_blurred,
@@ -50,7 +54,7 @@ if __name__ == "__main__":
             C=9,
         )
 
-        plt.figure(figsize=(12, 10))
+        fig_thresh = plt.figure(figsize=(12, 10))
         plt.imshow(img_thresh, cmap="gray")
         plt.show()
 
@@ -118,8 +122,9 @@ if __name__ == "__main__":
                 thickness=2,
             )
 
-        plt.figure(figsize=(12, 10))
+        fig_possible_contour = plt.figure(figsize=(12, 10))
         plt.imshow(temp_result, cmap="gray")
+        plt.show()
 
         MAX_DIAG_MULTIPLIER = 5
         MAX_ANGLE_DIFF = 12.0
@@ -205,7 +210,7 @@ if __name__ == "__main__":
                     thickness=2,
                 )
 
-        plt.figure(figsize=(12, 10))
+        fig_chars = plt.figure(figsize=(12, 10))
         plt.imshow(temp_result, cmap="gray")
         plt.show()
 
@@ -217,6 +222,7 @@ if __name__ == "__main__":
         plate_imgs = []
         plate_infos = []
 
+        fig_results = plt.figure(figsize=(12, 10))
         for i, matched_chars in enumerate(matched_result):
             sorted_chars = sorted(matched_chars, key=lambda x: x["cx"])
 
@@ -274,3 +280,10 @@ if __name__ == "__main__":
             plt.subplot(len(matched_result), 1, i + 1)
             plt.imshow(img_cropped, cmap="gray")
         plt.show()
+
+        img_1 = resize(img, target_pic_size)
+        img_1 = get_blurred_img(img_1)
+        img_1 = get_thresh_img(img_1)
+        plate_infos_2 = find_roi(img_1)
+
+        a = 1
