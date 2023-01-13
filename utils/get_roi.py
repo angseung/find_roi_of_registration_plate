@@ -19,17 +19,28 @@ PLATE_HEIGHT_PADDING = 1.5
 MIN_PLATE_RATIO = 3
 MAX_PLATE_RATIO = 10
 
-def resize(img: np.ndarray, size: Union[Tuple[int, int], int], is_updample: Optional[bool] = False) -> np.ndarray:
+
+def resize(
+    img: np.ndarray,
+    size: Union[Tuple[int, int], int],
+    is_updample: Optional[bool] = False,
+) -> np.ndarray:
     height, width, channel = img.shape
 
     if isinstance(size, int):
         ratio = height / width if height > width else width / height
-        dsize = (int(size * ratio), size) if width > height else (size, int(size * ratio))
+        dsize = (
+            (int(size * ratio), size) if width > height else (size, int(size * ratio))
+        )
 
     elif isinstance(size, tuple):
         dsize = size
 
-    return cv2.resize(img, dsize=dsize, interpolation=cv2.INTER_AREA) if not is_updample else cv2.resize(img, dsize=dsize, interpolation=cv2.INTER_LINEAR)
+    return (
+        cv2.resize(img, dsize=dsize, interpolation=cv2.INTER_AREA)
+        if not is_updample
+        else cv2.resize(img, dsize=dsize, interpolation=cv2.INTER_LINEAR)
+    )
 
 
 def get_blurred_img(img: np.ndarray) -> np.ndarray:
@@ -97,10 +108,10 @@ def find_roi(img_thresh: np.ndarray) -> List[Dict]:
         ratio = d["w"] / d["h"]
 
         if (
-                area > MIN_AREA
-                and d["w"] > MIN_WIDTH
-                and d["h"] > MIN_HEIGHT
-                and MIN_RATIO < ratio < MAX_RATIO
+            area > MIN_AREA
+            and d["w"] > MIN_WIDTH
+            and d["h"] > MIN_HEIGHT
+            and MIN_RATIO < ratio < MAX_RATIO
         ):
             d["idx"] = cnt
             cnt += 1
@@ -127,7 +138,9 @@ def find_roi(img_thresh: np.ndarray) -> List[Dict]:
                     angle_diff = 90
                 else:
                     angle_diff = np.degrees(np.arctan(dy / dx))
-                area_diff = abs(d1["w"] * d1["h"] - d2["w"] * d2["h"]) / (d1["w"] * d1["h"])
+                area_diff = abs(d1["w"] * d1["h"] - d2["w"] * d2["h"]) / (
+                    d1["w"] * d1["h"]
+                )
                 width_diff = abs(d1["w"] - d2["w"]) / d1["w"]
                 height_diff = abs(d1["h"] - d2["h"]) / d1["h"]
 
@@ -180,8 +193,8 @@ def find_roi(img_thresh: np.ndarray) -> List[Dict]:
         plate_cy = (sorted_chars[0]["cy"] + sorted_chars[-1]["cy"]) / 2
 
         plate_width = (
-                              sorted_chars[-1]["x"] + sorted_chars[-1]["w"] - sorted_chars[0]["x"]
-                      ) * PLATE_WIDTH_PADDING
+            sorted_chars[-1]["x"] + sorted_chars[-1]["w"] - sorted_chars[0]["x"]
+        ) * PLATE_WIDTH_PADDING
 
         sum_height = 0
         for d in sorted_chars:
@@ -201,7 +214,9 @@ def find_roi(img_thresh: np.ndarray) -> List[Dict]:
             center=(plate_cx, plate_cy), angle=angle, scale=1.0
         )
 
-        img_rotated = cv2.warpAffine(img_thresh, M=rotation_matrix, dsize=(width, height))
+        img_rotated = cv2.warpAffine(
+            img_thresh, M=rotation_matrix, dsize=(width, height)
+        )
 
         img_cropped = cv2.getRectSubPix(
             img_rotated,
@@ -210,10 +225,10 @@ def find_roi(img_thresh: np.ndarray) -> List[Dict]:
         )
 
         if (
-                img_cropped.shape[1] / img_cropped.shape[0] < MIN_PLATE_RATIO
-                or img_cropped.shape[1] / img_cropped.shape[0]
-                < MIN_PLATE_RATIO
-                > MAX_PLATE_RATIO
+            img_cropped.shape[1] / img_cropped.shape[0] < MIN_PLATE_RATIO
+            or img_cropped.shape[1] / img_cropped.shape[0]
+            < MIN_PLATE_RATIO
+            > MAX_PLATE_RATIO
         ):
             continue
 
@@ -230,19 +245,26 @@ def find_roi(img_thresh: np.ndarray) -> List[Dict]:
     return plate_infos
 
 
-def convert_contour(contours: List[Dict], imgsz: Tuple[int, int], target_imgsz: Tuple[int, int], is_upsample: Optional[bool] = True) -> List[Dict]:
-    if not is_upsample:
-        raise NotImplemented
+def convert_contour(
+    contours: List[Dict],
+    imgsz: Tuple[int, int],
+    target_imgsz: Tuple[int, int],
+) -> List[Dict]:
 
-    else:
-        assert imgsz[0] <= target_imgsz[0] and imgsz[1] <= target_imgsz[1]
-        ratio_height, ratio_width = target_imgsz[1] / imgsz[1], target_imgsz[0] / imgsz[0]
+    ratio_height, ratio_width = (
+        target_imgsz[1] / imgsz[1]
+        if target_imgsz[1] > imgsz[1]
+        else imgsz[1] / target_imgsz[1],
+        target_imgsz[0] / imgsz[0]
+        if target_imgsz[0] > imgsz[0]
+        else imgsz[0] / target_imgsz[0],
+    )
 
-        for contour in contours:
-            contour["x"] = int(contour["x"] * ratio_width)
-            contour["y"] = int(contour["y"] * ratio_height)
-            contour["w"] = int(contour["w"] * ratio_width)
-            contour["h"] = int(contour["h"] * ratio_height)
+    for contour in contours:
+        contour["x"] = int(contour["x"] * ratio_width)
+        contour["y"] = int(contour["y"] * ratio_height)
+        contour["w"] = int(contour["w"] * ratio_width)
+        contour["h"] = int(contour["h"] * ratio_height)
 
     return contours
 
@@ -253,18 +275,28 @@ if __name__ == "__main__":
     for fname in img_list:
         img_ori = cv2.imread(f"../images/{fname}")
         height_ori, width_ori = img_ori.shape[:2]
-        img = resize(img_ori, 720)
+        img = resize(img_ori, 480)
         height, width = img.shape[:2]
         img1 = get_blurred_img(img)
         img1 = get_thresh_img(img1, mode=1)
         contours = find_roi(img1)
-        contours_resized = convert_contour(contours, imgsz=(width, height), target_imgsz=(width_ori, height_ori), is_upsample=True)
+        contours = convert_contour(
+            contours,
+            imgsz=(width, height),
+            target_imgsz=(width_ori, height_ori),
+        )
 
-        if contours_resized:
-            for contour in contours_resized:
+        if contours:
+            for contour in contours:
                 top_left: Tuple[int, int] = (contour["x"], contour["y"])
-                bottom_right: Tuple[int, int] = (contour["x"] + contour["w"], contour["y"] + contour["h"])
-                img_ori = cv2.rectangle(img_ori, top_left, bottom_right, (0, 0, 0), 5)
-
+                bottom_right: Tuple[int, int] = (
+                    contour["x"] + contour["w"],
+                    contour["y"] + contour["h"],
+                )
+                img_ori = cv2.rectangle(
+                    img_ori, top_left, bottom_right, (255, 0, 0), 10
+                )
+        fig = plt.figure()
         plt.imshow(img_ori)
         plt.show()
+        fig.savefig(f"../outputs/{fname}")
