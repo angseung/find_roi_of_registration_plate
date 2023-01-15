@@ -23,7 +23,7 @@ MAX_PLATE_RATIO = 10
 def resize(
     img: np.ndarray,
     size: Union[Tuple[int, int], int],
-    is_updample: Optional[bool] = False,
+    is_upsample: Optional[bool] = False,
 ) -> np.ndarray:
     height, width, channel = img.shape
 
@@ -34,11 +34,13 @@ def resize(
         )
 
     elif isinstance(size, tuple):
+        if len(size) != 2:
+            raise ValueError
         dsize = size
 
     return (
         cv2.resize(img, dsize=dsize, interpolation=cv2.INTER_AREA)
-        if not is_updample
+        if not is_upsample
         else cv2.resize(img, dsize=dsize, interpolation=cv2.INTER_LINEAR)
     )
 
@@ -58,14 +60,16 @@ def get_blurred_img(img: np.ndarray) -> np.ndarray:
     return cv2.GaussianBlur(gray, ksize=(5, 5), sigmaX=0)
 
 
-def get_thresh_img(img: np.ndarray, mode: Optional[int] = 1) -> np.ndarray:
+def get_thresh_img(img: np.ndarray, mode: Optional[Union[int, str]] = 1) -> np.ndarray:
+    if mode not in [0, 1, "normal", "adaptive"]:
+        raise ValueError
 
-    if mode == 0:
+    if mode in ["normal", 0]:
         # mode 1. normal threshold
         ret, binary = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)
         img_thresh = cv2.bitwise_not(binary)
 
-    elif mode == 1:
+    elif mode in ["adaptive", 1]:
         # mode 2. adaptive threshold
         img_thresh = cv2.adaptiveThreshold(
             img,
@@ -79,7 +83,7 @@ def get_thresh_img(img: np.ndarray, mode: Optional[int] = 1) -> np.ndarray:
     return img_thresh
 
 
-def find_roi(img_thresh: np.ndarray) -> List[Dict]:
+def find_roi(img_thresh: np.ndarray) -> List[Dict[str, int]]:
     contours, _ = cv2.findContours(
         img_thresh, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_SIMPLE
     )
@@ -273,6 +277,8 @@ if __name__ == "__main__":
     img_list = os.listdir("../images")
 
     for fname in img_list:
+        if fname[0] == ".":
+            continue
         img_ori = cv2.imread(f"../images/{fname}")
         height_ori, width_ori = img_ori.shape[:2]
         img = resize(img_ori, 480)
