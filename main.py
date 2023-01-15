@@ -19,7 +19,11 @@ if __name__ == "__main__":
         """resize"""
         height, width, channel = img_ori.shape
         ratio = height / width if height > width else width / height
-        dsize = (int(target_pic_size * ratio), target_pic_size) if width > height else (target_pic_size, int(target_pic_size * ratio))
+        dsize = (
+            (int(target_pic_size * ratio), target_pic_size)
+            if width > height
+            else (target_pic_size, int(target_pic_size * ratio))
+        )
         img = cv2.resize(img_ori, dsize=dsize, interpolation=cv2.INTER_AREA)
         height, width, channel = img.shape
 
@@ -72,7 +76,11 @@ if __name__ == "__main__":
         for contour in contours:
             x, y, w, h = cv2.boundingRect(contour)
             cv2.rectangle(
-                temp_result, pt1=(x, y), pt2=(x + w, y + h), color=(255, 255, 255), thickness=2
+                temp_result,
+                pt1=(x, y),
+                pt2=(x + w, y + h),
+                color=(255, 255, 255),
+                thickness=2,
             )
 
             contours_dict.append(
@@ -133,7 +141,6 @@ if __name__ == "__main__":
         MAX_HEIGHT_DIFF = 0.2
         MIN_N_MATCHED = 3
 
-
         def find_chars(contour_list):
             matched_result_idx = []
 
@@ -155,7 +162,9 @@ if __name__ == "__main__":
                         angle_diff = 90
                     else:
                         angle_diff = np.degrees(np.arctan(dy / dx))
-                    area_diff = abs(d1["w"] * d1["h"] - d2["w"] * d2["h"]) / (d1["w"] * d1["h"])
+                    area_diff = abs(d1["w"] * d1["h"] - d2["w"] * d2["h"]) / (
+                        d1["w"] * d1["h"]
+                    )
                     width_diff = abs(d1["w"] - d2["w"]) / d1["w"]
                     height_diff = abs(d1["h"] - d2["h"]) / d1["h"]
 
@@ -190,7 +199,6 @@ if __name__ == "__main__":
                 break
 
             return matched_result_idx
-
 
         result_idx = find_chars(possible_contours)
 
@@ -251,7 +259,9 @@ if __name__ == "__main__":
                 center=(plate_cx, plate_cy), angle=angle, scale=1.0
             )
 
-            img_rotated = cv2.warpAffine(img_thresh, M=rotation_matrix, dsize=(width, height))
+            img_rotated = cv2.warpAffine(
+                img_thresh, M=rotation_matrix, dsize=(width, height)
+            )
 
             img_cropped = cv2.getRectSubPix(
                 img_rotated,
