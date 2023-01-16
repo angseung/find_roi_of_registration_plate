@@ -6,8 +6,10 @@ import matplotlib.pyplot as plt
 
 
 MIN_AREA = 80
-MIN_WIDTH, MIN_HEIGHT = 2, 8
-MIN_RATIO, MAX_RATIO = 0.25, 1.0
+MIN_WIDTH = 2
+MIN_HEIGHT = 8
+MIN_RATIO = 0.25
+MAX_RATIO = 1.0
 MAX_DIAG_MULTIPLIER = 5
 MAX_ANGLE_DIFF = 12.0
 MAX_AREA_DIFF = 0.5
@@ -253,7 +255,7 @@ def convert_contour(
     contours: List[Dict],
     imgsz: Tuple[int, int],
     target_imgsz: Tuple[int, int],
-) -> List[Dict]:
+) -> List[Dict[str, int]]:
 
     ratio_height, ratio_width = (
         target_imgsz[1] / imgsz[1]
