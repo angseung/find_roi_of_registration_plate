@@ -85,6 +85,15 @@ def get_thresh_img(img: np.ndarray, mode: Optional[Union[int, str]] = 1) -> np.n
     return img_thresh
 
 
+def get_black_and_white_img(img: np.ndarray, output_inverse: bool = True) -> np.ndarray:
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    img = cv2.medianBlur(img, 7)
+    img = cv2.Laplacian(img, cv2.CV_8U, 5)
+    _, img = cv2.threshold(img, 20, 255, cv2.THRESH_BINARY)
+
+    return cv2.bitwise_not(img) if output_inverse else img
+
+
 def find_roi(img_thresh: np.ndarray) -> List[Dict[str, int]]:
     contours, _ = cv2.findContours(
         img_thresh, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_SIMPLE
@@ -275,8 +284,10 @@ def convert_contour(
     return contours
 
 
+DEBUG_OPT: bool = True
+
 if __name__ == "__main__":
-    img_list = os.listdir("../images")
+    img_list = os.listdir("../img_green")
 
     for fname in img_list:
         if fname[0] == ".":
@@ -285,8 +296,12 @@ if __name__ == "__main__":
         height_ori, width_ori = img_ori.shape[:2]
         img = resize(img_ori, 480)
         height, width = img.shape[:2]
-        img1 = get_blurred_img(img)
-        img1 = get_thresh_img(img1, mode=1)
+        # img1 = get_blurred_img(img)
+        # img1 = get_thresh_img(img1, mode=0)
+        img1 = get_black_and_white_img(img, False)
+        if DEBUG_OPT:
+            plt.imshow(img1)
+            plt.show()
         contours = find_roi(img1)
         contours = convert_contour(
             contours,
@@ -304,6 +319,7 @@ if __name__ == "__main__":
                 img_ori = cv2.rectangle(
                     img_ori, top_left, bottom_right, (255, 0, 0), 10
                 )
+                break
         fig = plt.figure()
         plt.imshow(img_ori)
         plt.show()
