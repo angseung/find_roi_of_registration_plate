@@ -1,4 +1,5 @@
 import os
+import time
 from typing import Union, Tuple, List, Optional, Dict
 import cv2
 import numpy as np
@@ -259,6 +260,8 @@ if __name__ == "__main__":
     for fname in img_list:
         if fname[0] == ".":
             continue
+
+        start = time.time()
         img_ori = cv2.imread(f"../images/{fname}")
         height_ori, width_ori = img_ori.shape[:2]
         img = resize(img_ori, 480)
@@ -275,6 +278,8 @@ if __name__ == "__main__":
             imgsz=(width, height),
             target_imgsz=(width_ori, height_ori),
         )
+
+        print(f"processing time for {fname}: {time.time() - start}, imgsz: {width_ori}*{height_ori}")
 
         if contours:
             for contour in contours:
