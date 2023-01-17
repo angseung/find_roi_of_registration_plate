@@ -197,10 +197,8 @@ def find_roi(img_thresh: np.ndarray) -> List[Dict[str, int]]:
     for idx_list in result_idx:
         matched_result.append(np.take(possible_contours, idx_list))
 
-    plate_imgs = []
     plate_infos = []
 
-    fig_results = plt.figure(figsize=(12, 10))
     for i, matched_chars in enumerate(matched_result):
         sorted_chars = sorted(matched_chars, key=lambda x: x["cx"])
 
@@ -217,37 +215,6 @@ def find_roi(img_thresh: np.ndarray) -> List[Dict[str, int]]:
 
         plate_height = int(sum_height / len(sorted_chars) * PLATE_HEIGHT_PADDING)
 
-        triangle_height = sorted_chars[-1]["cy"] - sorted_chars[0]["cy"]
-        triangle_hypotenus = np.linalg.norm(
-            np.array([sorted_chars[0]["cx"], sorted_chars[0]["cy"]])
-            - np.array([sorted_chars[-1]["cx"], sorted_chars[-1]["cy"]])
-        )
-
-        angle = np.degrees(np.arcsin(triangle_height / triangle_hypotenus))
-
-        rotation_matrix = cv2.getRotationMatrix2D(
-            center=(plate_cx, plate_cy), angle=angle, scale=1.0
-        )
-
-        img_rotated = cv2.warpAffine(
-            img_thresh, M=rotation_matrix, dsize=(width, height)
-        )
-
-        img_cropped = cv2.getRectSubPix(
-            img_rotated,
-            patchSize=(int(plate_width), int(plate_height)),
-            center=(int(plate_cx), int(plate_cy)),
-        )
-
-        if (
-            img_cropped.shape[1] / img_cropped.shape[0] < MIN_PLATE_RATIO
-            or img_cropped.shape[1] / img_cropped.shape[0]
-            < MIN_PLATE_RATIO
-            > MAX_PLATE_RATIO
-        ):
-            continue
-
-        plate_imgs.append(img_cropped)
         plate_infos.append(
             {
                 "x": int(plate_cx - plate_width / 2),
@@ -287,7 +254,7 @@ def convert_contour(
 DEBUG_OPT: bool = True
 
 if __name__ == "__main__":
-    img_list = os.listdir("../img_green")
+    img_list = os.listdir("../images")
 
     for fname in img_list:
         if fname[0] == ".":
@@ -296,9 +263,9 @@ if __name__ == "__main__":
         height_ori, width_ori = img_ori.shape[:2]
         img = resize(img_ori, 480)
         height, width = img.shape[:2]
-        # img1 = get_blurred_img(img)
-        # img1 = get_thresh_img(img1, mode=0)
-        img1 = get_black_and_white_img(img, False)
+        img1 = get_blurred_img(img)
+        img1 = get_thresh_img(img1, mode=1)
+        # img1 = get_black_and_white_img(img, False)
         if DEBUG_OPT:
             plt.imshow(img1)
             plt.show()
