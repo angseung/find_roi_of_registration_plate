@@ -69,7 +69,8 @@ def get_thresh_img(img: np.ndarray, mode: Optional[Union[int, str]] = 1) -> np.n
 
     if mode in ["normal", 0]:
         # mode 1. normal threshold
-        ret, binary = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)
+        # ret, binary = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)
+        ret, binary = cv2.threshold(img, 60, 255, cv2.THRESH_BINARY_INV)
         img_thresh = cv2.bitwise_not(binary)
 
     elif mode in ["adaptive", 1]:
@@ -255,23 +256,34 @@ def convert_contour(
 DEBUG_OPT: bool = True
 
 if __name__ == "__main__":
-    img_list = os.listdir("../images")
+    img_dir = "../images"
+    # img_dir = "../regions"
+    img_list = os.listdir(img_dir)
 
     for fname in img_list:
         if fname[0] == ".":
             continue
 
         start = time.time()
-        img_ori = cv2.imread(f"../images/{fname}")
+        img_ori = cv2.imread(f"{img_dir}/{fname}")
+        img_ori = cv2.cvtColor(img_ori, cv2.COLOR_BGR2RGB)
         height_ori, width_ori = img_ori.shape[:2]
         img = resize(img_ori, 480)
         height, width = img.shape[:2]
-        img1 = get_blurred_img(img)
-        img1 = get_thresh_img(img1, mode=1)
+        # img1 = get_blurred_img(img)
+        # img1 = get_thresh_img(img1, mode=1)
         # img1 = get_black_and_white_img(img, False)
+        img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        blurred = cv2.GaussianBlur(img_gray, (3, 3), 0)
+
+        threshold1 = 200
+        threshold2 = 300
+        img1 = cv2.Canny(blurred, threshold1, threshold2)
+
         if DEBUG_OPT:
             plt.imshow(img1)
             plt.show()
+
         contours = find_roi(img1)
         contours = convert_contour(
             contours,
@@ -291,7 +303,7 @@ if __name__ == "__main__":
                 img_ori = cv2.rectangle(
                     img_ori, top_left, bottom_right, (255, 0, 0), 10
                 )
-                break
+                # break
         fig = plt.figure()
         plt.imshow(img_ori)
         plt.show()
