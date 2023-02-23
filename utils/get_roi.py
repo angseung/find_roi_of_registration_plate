@@ -268,7 +268,7 @@ if __name__ == "__main__":
         img_ori = cv2.imread(f"{img_dir}/{fname}")
         img_ori = cv2.cvtColor(img_ori, cv2.COLOR_BGR2RGB)
         height_ori, width_ori = img_ori.shape[:2]
-        img = resize(img_ori, 480)
+        img = resize(img_ori, 640)
         height, width = img.shape[:2]
         # img1 = get_blurred_img(img)
         # img1 = get_thresh_img(img1, mode=1)
@@ -276,9 +276,10 @@ if __name__ == "__main__":
         img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         blurred = cv2.GaussianBlur(img_gray, (3, 3), 0)
 
-        threshold1 = 200
-        threshold2 = 300
-        img1 = cv2.Canny(blurred, threshold1, threshold2)
+        threshold1 = 100
+        threshold2 = 500
+        # img1 = cv2.Canny(blurred, threshold1, threshold2)
+        img1 = cv2.Canny(img_gray, threshold1, threshold2)
 
         if DEBUG_OPT:
             plt.imshow(img1)
@@ -303,8 +304,8 @@ if __name__ == "__main__":
                 img_ori = cv2.rectangle(
                     img_ori, top_left, bottom_right, (255, 0, 0), 10
                 )
-                # break
+                break  # TODO: add routine for ROI ratio comparison and exception
         fig = plt.figure()
         plt.imshow(img_ori)
-        plt.show()
+        # plt.show()
         fig.savefig(f"../outputs/{fname}")
