@@ -155,9 +155,11 @@ def find_roi(img_thresh: np.ndarray) -> List[Dict[str, int]]:
                     angle_diff = 90
                 else:
                     angle_diff = np.degrees(np.arctan(dy / dx))
+
                 area_diff = abs(d1["w"] * d1["h"] - d2["w"] * d2["h"]) / (
                     d1["w"] * d1["h"]
                 )
+
                 width_diff = abs(d1["w"] - d2["w"]) / d1["w"]
                 height_diff = abs(d1["h"] - d2["h"]) / d1["h"]
 
@@ -176,14 +178,13 @@ def find_roi(img_thresh: np.ndarray) -> List[Dict[str, int]]:
                 continue
 
             matched_result_idx.append(matched_contours_idx)
-
             unmatched_contour_idx = []
+
             for d4 in contour_list:
                 if d4["idx"] not in matched_contours_idx:
                     unmatched_contour_idx.append(d4["idx"])
 
             unmatched_contour = np.take(possible_contours, unmatched_contour_idx)
-
             recursive_contour_list = find_chars(unmatched_contour)
 
             for idx in recursive_contour_list:
@@ -212,11 +213,11 @@ def find_roi(img_thresh: np.ndarray) -> List[Dict[str, int]]:
         ) * PLATE_WIDTH_PADDING
 
         sum_height = 0
+
         for d in sorted_chars:
             sum_height += d["h"]
 
         plate_height = int(sum_height / len(sorted_chars) * PLATE_HEIGHT_PADDING)
-
         plate_infos.append(
             {
                 "x": int(plate_cx - plate_width / 2),

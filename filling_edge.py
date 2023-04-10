@@ -5,7 +5,10 @@ import matplotlib.image as mpimg
 
 # Read image as cv2.COLOR_BGR
 # img = mpimg.imread("img_green/2018_04_22_75122_1527577952T75122S05M2018Y161232E223.jpg", cv2.IMREAD_COLOR)
-img = mpimg.imread("img_green/2017_01_05_32951_1527844136T32951S06M2018Y180856E569_1.jpg", cv2.IMREAD_COLOR)
+img = mpimg.imread(
+    "img_green/2017_01_05_32951_1527844136T32951S06M2018Y180856E569_1.jpg",
+    cv2.IMREAD_COLOR,
+)
 img = cv2.resize(img, (400, 300))
 img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 blurred = cv2.GaussianBlur(img_gray, (3, 3), 0)
