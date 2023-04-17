@@ -7,8 +7,10 @@ import matplotlib.pyplot as plt
 
 
 MIN_AREA = 80
-MIN_WIDTH = 2
-MIN_HEIGHT = 8
+MIN_WIDTH = 10  # 2
+MIN_HEIGHT = 8  # 8
+MAX_WIDTH = 100
+MAX_HEIGHT = 60
 MIN_RATIO = 0.25
 MAX_RATIO = 1.0
 MAX_DIAG_MULTIPLIER = 5
@@ -16,7 +18,8 @@ MAX_ANGLE_DIFF = 12.0
 MAX_AREA_DIFF = 0.5
 MAX_WIDTH_DIFF = 0.8
 MAX_HEIGHT_DIFF = 0.2
-MIN_N_MATCHED = 3
+MIN_N_MATCHED = 4
+MAX_N_MATCHED = 8
 PLATE_WIDTH_PADDING = 1.3
 PLATE_HEIGHT_PADDING = 1.5
 MIN_PLATE_RATIO = 3
@@ -96,7 +99,8 @@ def get_black_and_white_img(img: np.ndarray, output_inverse: bool = True) -> np.
     return cv2.bitwise_not(img) if output_inverse else img
 
 
-def find_roi(img_thresh: np.ndarray) -> List[Dict[str, int]]:
+def find_roi(img: np.ndarray, img_thresh: np.ndarray) -> List[Dict[str, int]]:
+    assert img.shape[:-1] == img_thresh.shape
     contours, _ = cv2.findContours(
         img_thresh, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_SIMPLE
     )
@@ -126,8 +130,8 @@ def find_roi(img_thresh: np.ndarray) -> List[Dict[str, int]]:
 
         if (
             area > MIN_AREA
-            and d["w"] > MIN_WIDTH
-            and d["h"] > MIN_HEIGHT
+            and MIN_WIDTH < d["w"] < MAX_WIDTH
+            and MIN_HEIGHT < d["h"] < MAX_HEIGHT
             and MIN_RATIO < ratio < MAX_RATIO
         ):
             d["idx"] = cnt
@@ -174,7 +178,7 @@ def find_roi(img_thresh: np.ndarray) -> List[Dict[str, int]]:
 
             matched_contours_idx.append(d1["idx"])
 
-            if len(matched_contours_idx) < MIN_N_MATCHED:
+            if len(matched_contours_idx) < MIN_N_MATCHED or len(matched_contours_idx) > MAX_N_MATCHED:
                 continue
 
             matched_result_idx.append(matched_contours_idx)
@@ -200,6 +204,10 @@ def find_roi(img_thresh: np.ndarray) -> List[Dict[str, int]]:
     for idx_list in result_idx:
         matched_result.append(np.take(possible_contours, idx_list))
 
+    SHOW_CONTOUR_OPT = True
+    if SHOW_CONTOUR_OPT:
+        show_contours(img=img, result=matched_result)
+
     plate_infos = []
 
     for i, matched_chars in enumerate(matched_result):
@@ -217,6 +225,26 @@ def find_roi(img_thresh: np.ndarray) -> List[Dict[str, int]]:
         for d in sorted_chars:
             sum_height += d["h"]
 
+        # plate_height = int(sum_height / len(sorted_chars) * PLATE_HEIGHT_PADDING)
+        #
+        # triangle_height = sorted_chars[-1]['cy'] - sorted_chars[0]['cy']
+        # triangle_hypotenus = np.linalg.norm(
+        #     np.array([sorted_chars[0]['cx'], sorted_chars[0]['cy']]) -
+        #     np.array([sorted_chars[-1]['cx'], sorted_chars[-1]['cy']])
+        # )
+        #
+        # angle = np.degrees(np.arcsin(triangle_height / triangle_hypotenus))
+        #
+        # rotation_matrix = cv2.getRotationMatrix2D(center=(plate_cx, plate_cy), angle=angle, scale=1.0)
+        #
+        # img_rotated = cv2.warpAffine(img_thresh, M=rotation_matrix, dsize=(width, height))
+        #
+        # img_cropped = cv2.getRectSubPix(
+        #     img_rotated,
+        #     patchSize=(int(plate_width), int(plate_height)),
+        #     center=(int(plate_cx), int(plate_cy))
+        # )
+
         plate_height = int(sum_height / len(sorted_chars) * PLATE_HEIGHT_PADDING)
         plate_infos.append(
             {
@@ -226,6 +254,9 @@ def find_roi(img_thresh: np.ndarray) -> List[Dict[str, int]]:
                 "h": int(plate_height),
             }
         )
+
+        # plt.subplot(len(matched_result), 1, i + 1)
+        # plt.imshow(img_cropped, cmap='gray')
 
     return plate_infos
 
@@ -254,11 +285,28 @@ def convert_contour(
     return contours
 
 
-DEBUG_OPT: bool = True
+def show_contours(img: np.ndarray, result: List, return_img: bool = False) -> Union[None, np.ndarray]:
+    temp_result = img.copy()
+
+    for r in result:
+        for d in r:
+            cv2.rectangle(temp_result, pt1=(d['x'], d['y']),
+                          pt2=(d['x'] + d['w'], d['y'] + d['h']),
+                          color=(255, 255, 255), thickness=2)
+
+    plt.figure(figsize=(12, 10))
+    plt.imshow(temp_result, cmap='gray')
+    plt.show()
+
+    if return_img:
+        return temp_result
+
+
+DEBUG_OPT: bool = False
 
 if __name__ == "__main__":
-    img_dir = "../images"
-    # img_dir = "../regions"
+    # img_dir = "../images"
+    img_dir = "../regions"
     img_list = os.listdir(img_dir)
 
     for fname in img_list:
@@ -286,7 +334,7 @@ if __name__ == "__main__":
             plt.imshow(img1)
             plt.show()
 
-        contours = find_roi(img1)
+        contours = find_roi(img, img1)
         contours = convert_contour(
             contours,
             imgsz=(width, height),
@@ -303,9 +351,9 @@ if __name__ == "__main__":
                     contour["y"] + contour["h"],
                 )
                 img_ori = cv2.rectangle(
-                    img_ori, top_left, bottom_right, (255, 0, 0), 10
+                    img_ori, top_left, bottom_right, (255, 0, 0), 15
                 )
-                break  # TODO: add routine for ROI ratio comparison and exception
+                # break
         fig = plt.figure()
         plt.imshow(img_ori)
         # plt.show()
