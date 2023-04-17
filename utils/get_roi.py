@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 MIN_AREA = 80
 MIN_WIDTH = 10  # 2
 MIN_HEIGHT = 8  # 8
-MAX_WIDTH = 100
-MAX_HEIGHT = 60
+MAX_WIDTH = 200
+MAX_HEIGHT = 150
 MIN_RATIO = 0.25
 MAX_RATIO = 1.0
 MAX_DIAG_MULTIPLIER = 5
@@ -24,6 +24,13 @@ PLATE_WIDTH_PADDING = 1.3
 PLATE_HEIGHT_PADDING = 1.5
 MIN_PLATE_RATIO = 3
 MAX_PLATE_RATIO = 10
+
+
+def unsharp(img: np.ndarray, alpha: float = 2.0) -> np.ndarray:
+    blr = cv2.GaussianBlur(img, (0, 0), 2)
+    dst = np.clip((1 + alpha) * img - alpha * blr, 0, 255).astype(np.uint8)
+
+    return dst
 
 
 def resize(
@@ -204,7 +211,6 @@ def find_roi(img: np.ndarray, img_thresh: np.ndarray) -> List[Dict[str, int]]:
     for idx_list in result_idx:
         matched_result.append(np.take(possible_contours, idx_list))
 
-    SHOW_CONTOUR_OPT = True
     if SHOW_CONTOUR_OPT:
         show_contours(img=img, result=matched_result)
 
@@ -292,17 +298,19 @@ def show_contours(img: np.ndarray, result: List, return_img: bool = False) -> Un
         for d in r:
             cv2.rectangle(temp_result, pt1=(d['x'], d['y']),
                           pt2=(d['x'] + d['w'], d['y'] + d['h']),
-                          color=(255, 255, 255), thickness=2)
-
+                          color=(0, 0, 255), thickness=2)
+    plt.figure()
     plt.figure(figsize=(12, 10))
     plt.imshow(temp_result, cmap='gray')
-    plt.show()
+    # plt.show()
+    plt.savefig(f"../c_outputs/{fname}")
 
     if return_img:
         return temp_result
 
 
 DEBUG_OPT: bool = False
+SHOW_CONTOUR_OPT: bool = True
 
 if __name__ == "__main__":
     # img_dir = "../images"
@@ -322,6 +330,7 @@ if __name__ == "__main__":
         # img1 = get_blurred_img(img)
         # img1 = get_thresh_img(img1, mode=1)
         # img1 = get_black_and_white_img(img, False)
+        # sharp = unsharp(img)
         img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         blurred = cv2.GaussianBlur(img_gray, (3, 3), 0)
 
@@ -351,7 +360,7 @@ if __name__ == "__main__":
                     contour["y"] + contour["h"],
                 )
                 img_ori = cv2.rectangle(
-                    img_ori, top_left, bottom_right, (255, 0, 0), 15
+                    img_ori, top_left, bottom_right, (0, 0, 255), 15
                 )
                 # break
         fig = plt.figure()
