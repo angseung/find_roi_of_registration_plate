@@ -4,26 +4,7 @@ from typing import Union, Tuple, List, Optional, Dict
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-
-
-MIN_AREA = 80
-MIN_WIDTH = 10  # 2
-MIN_HEIGHT = 8  # 8
-MAX_WIDTH = 200
-MAX_HEIGHT = 150
-MIN_RATIO = 0.25
-MAX_RATIO = 1.0
-MAX_DIAG_MULTIPLIER = 5
-MAX_ANGLE_DIFF = 12.0
-MAX_AREA_DIFF = 0.5
-MAX_WIDTH_DIFF = 0.8
-MAX_HEIGHT_DIFF = 0.2
-MIN_N_MATCHED = 4
-MAX_N_MATCHED = 8
-PLATE_WIDTH_PADDING = 1.3
-PLATE_HEIGHT_PADDING = 1.5
-MIN_PLATE_RATIO = 3
-MAX_PLATE_RATIO = 10
+from hyps import *
 
 
 def unsharp(img: np.ndarray, alpha: float = 2.0) -> np.ndarray:
