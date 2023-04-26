@@ -4,7 +4,7 @@ from typing import Union, Tuple, List, Optional, Dict
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from hyps import *
+from utils.hyps import *
 
 
 def unsharp(img: np.ndarray, alpha: float = 2.0) -> np.ndarray:
@@ -166,10 +166,12 @@ def find_roi(img: np.ndarray, img_thresh: np.ndarray) -> List[Dict[str, int]]:
 
             matched_contours_idx.append(d1["idx"])
 
-            if len(matched_contours_idx) < MIN_N_MATCHED or len(matched_contours_idx) > MAX_N_MATCHED:
+            if len(matched_contours_idx) < MIN_N_MATCHED:
                 continue
 
             matched_result_idx.append(matched_contours_idx)
+
+            # find matched contour for remainder contours
             unmatched_contour_idx = []
 
             for d4 in contour_list:
@@ -291,10 +293,9 @@ def show_contours(img: np.ndarray, result: List, return_img: bool = False) -> Un
 
 
 DEBUG_OPT: bool = False
-SHOW_CONTOUR_OPT: bool = True
+SHOW_CONTOUR_OPT: bool = False
 
 if __name__ == "__main__":
-    # img_dir = "../images"
     img_dir = "../regions"
     img_list = os.listdir(img_dir)
 
@@ -308,17 +309,10 @@ if __name__ == "__main__":
         height_ori, width_ori = img_ori.shape[:2]
         img = resize(img_ori, 640)
         height, width = img.shape[:2]
-        # img1 = get_blurred_img(img)
-        # img1 = get_thresh_img(img1, mode=1)
-        # img1 = get_black_and_white_img(img, False)
-        # sharp = unsharp(img)
         img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        blurred = cv2.GaussianBlur(img_gray, (3, 3), 0)
+        blurred = cv2.GaussianBlur(img_gray, (BLUR_KERNEL_SIZE, BLUR_KERNEL_SIZE), 0)
 
-        threshold1 = 100
-        threshold2 = 500
-        # img1 = cv2.Canny(blurred, threshold1, threshold2)
-        img1 = cv2.Canny(img_gray, threshold1, threshold2)
+        img1 = cv2.Canny(blurred, CANNY_LOWER_THRESH, CANNY_UPPER_THRESH)
 
         if DEBUG_OPT:
             plt.imshow(img1)
