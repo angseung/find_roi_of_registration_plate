@@ -274,22 +274,107 @@ def convert_contour(
     return contours
 
 
-def show_contours(img: np.ndarray, result: List, return_img: bool = False) -> Union[None, np.ndarray]:
+def show_contours(
+    img: np.ndarray, result: List, return_img: bool = False
+) -> Union[None, np.ndarray]:
     temp_result = img.copy()
 
     for r in result:
         for d in r:
-            cv2.rectangle(temp_result, pt1=(d['x'], d['y']),
-                          pt2=(d['x'] + d['w'], d['y'] + d['h']),
-                          color=(0, 0, 255), thickness=2)
+            cv2.rectangle(
+                temp_result,
+                pt1=(d["x"], d["y"]),
+                pt2=(d["x"] + d["w"], d["y"] + d["h"]),
+                color=(0, 0, 255),
+                thickness=2,
+            )
     plt.figure()
     plt.figure(figsize=(12, 10))
-    plt.imshow(temp_result, cmap='gray')
+    plt.imshow(temp_result, cmap="gray")
     # plt.show()
     plt.savefig(f"../c_outputs/{fname}")
 
     if return_img:
         return temp_result
+
+
+def clip(val: int, lower: int = 0) -> int:
+    return val if val >= lower else lower
+
+
+def crop_region_of_plates(
+    img: Union[np.ndarray, str],
+    target_imgsz: int = 320,
+    imgsz: int = 640,
+    top_only: bool = True,
+    img_show_opt: bool = False,
+) -> np.ndarray:
+    if isinstance(img, str):
+        img = cv2.imread(img)  # BGR
+
+    img_ori = img.copy()
+    img = cv2.cvtColor(img_ori, cv2.COLOR_BGR2RGB)
+    height_ori, width_ori = img_ori.shape[:2]
+
+    # resize input image
+    img = resize(img_ori, imgsz)
+    height, width = img.shape[:2]
+
+    # convert img to grayscale
+    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    # blur image to reduce noise
+    blurred = cv2.GaussianBlur(img_gray, (BLUR_KERNEL_SIZE, BLUR_KERNEL_SIZE), 0)
+
+    # detect edge with canny edge detection
+    img1 = cv2.Canny(blurred, CANNY_LOWER_THRESH, CANNY_UPPER_THRESH)
+
+    if img_show_opt:
+        plt.imshow(img1)
+        plt.show()
+
+    contours = find_roi(img, img1)
+    contours = convert_contour(
+        contours,
+        imgsz=(width, height),
+        target_imgsz=(width_ori, height_ori),
+    )
+
+    if contours:
+        for contour in contours:
+            top_left: Tuple[int, int] = (contour["x"], contour["y"])
+            bottom_right: Tuple[int, int] = (
+                contour["x"] + contour["w"],
+                contour["y"] + contour["h"],
+            )
+
+            plate_width = int(contour["w"] * PLATE_WIDTH_PADDING)
+            plate_height = int(contour["h"] * PLATE_HEIGHT_PADDING)
+
+            padding_left_right = (plate_width - contour["w"]) // 2
+            padding_upper_lower = (plate_height - contour["h"]) // 2
+
+            xtl_cropped = clip(contour["x"] - padding_left_right, lower=0)
+            ytl_cropped = clip(contour["y"] - padding_upper_lower, lower=0)
+
+            img_cropped = img_ori[
+                ytl_cropped : ytl_cropped + padding_upper_lower,
+                xtl_cropped : xtl_cropped + padding_left_right,
+                :,
+            ]  # (H, W, C)
+
+            if img_show_opt:
+                fig = plt.figure()
+                plt.imshow(img_cropped)
+                plt.show()
+
+            if top_only:
+                break
+
+    else:
+        return cv2.resize(img_ori, target_imgsz)
+
+    return cv2.resize(img_cropped, target_imgsz)
 
 
 DEBUG_OPT: bool = False
@@ -325,7 +410,9 @@ if __name__ == "__main__":
             target_imgsz=(width_ori, height_ori),
         )
 
-        print(f"processing time for {fname}: {time.time() - start}, imgsz: {width_ori}*{height_ori}")
+        print(
+            f"processing time for {fname}: {time.time() - start}, imgsz: {width_ori}*{height_ori}"
+        )
 
         if contours:
             for contour in contours:
