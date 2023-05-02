@@ -301,7 +301,7 @@ def show_contours(
 def clip(val: int, lower: int = 0, higher: int = 255) -> int:
     if lower <= val <= higher:
         return val
-    elif val > lower:
+    elif val < lower:
         return lower
     else:
         return higher
@@ -319,7 +319,7 @@ def crop_region_of_plates(
     height_ori, width_ori = img_ori.shape[:2]
 
     # resize input image
-    img = resize(img_ori, imgsz)
+    img = resize(img_ori, imgsz, is_upsample=False)
     height, width = img.shape[:2]
 
     # convert img to grayscale
@@ -371,15 +371,17 @@ def crop_region_of_plates(
                 break
 
     else:
-        return cv2.resize(img_ori, target_imgsz)
+        return resize(img_ori, target_imgsz, is_upsample=False)
 
-    return cv2.resize(img_cropped, target_imgsz)
+    return resize(img_cropped, target_imgsz, is_upsample=True)
 
 
-DEBUG_OPT: bool = False
+DEBUG_OPT: bool = True
+SHOW_CONTOUR_OPT = False
 
 if __name__ == "__main__":
     img_dir = "../regions"
+    target_dir = "../outputs"
     img_list = os.listdir(img_dir)
 
     for fname in img_list:
@@ -395,3 +397,4 @@ if __name__ == "__main__":
             top_only=True,
             img_show_opt=DEBUG_OPT,
         )
+        cv2.imwrite(f"{target_dir}/{fname}", img_cropped)
