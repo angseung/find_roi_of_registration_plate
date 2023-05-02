@@ -214,26 +214,6 @@ def find_roi(img: np.ndarray, img_thresh: np.ndarray) -> List[Dict[str, int]]:
         for d in sorted_chars:
             sum_height += d["h"]
 
-        # plate_height = int(sum_height / len(sorted_chars) * PLATE_HEIGHT_PADDING)
-        #
-        # triangle_height = sorted_chars[-1]['cy'] - sorted_chars[0]['cy']
-        # triangle_hypotenus = np.linalg.norm(
-        #     np.array([sorted_chars[0]['cx'], sorted_chars[0]['cy']]) -
-        #     np.array([sorted_chars[-1]['cx'], sorted_chars[-1]['cy']])
-        # )
-        #
-        # angle = np.degrees(np.arcsin(triangle_height / triangle_hypotenus))
-        #
-        # rotation_matrix = cv2.getRotationMatrix2D(center=(plate_cx, plate_cy), angle=angle, scale=1.0)
-        #
-        # img_rotated = cv2.warpAffine(img_thresh, M=rotation_matrix, dsize=(width, height))
-        #
-        # img_cropped = cv2.getRectSubPix(
-        #     img_rotated,
-        #     patchSize=(int(plate_width), int(plate_height)),
-        #     center=(int(plate_cx), int(plate_cy))
-        # )
-
         plate_height = int(sum_height / len(sorted_chars) * PLATE_HEIGHT_PADDING)
         plate_infos.append(
             {
@@ -244,9 +224,6 @@ def find_roi(img: np.ndarray, img_thresh: np.ndarray) -> List[Dict[str, int]]:
             }
         )
 
-        # plt.subplot(len(matched_result), 1, i + 1)
-        # plt.imshow(img_cropped, cmap='gray')
-
     return plate_infos
 
 
@@ -255,6 +232,13 @@ def convert_contour(
     imgsz: Tuple[int, int],
     target_imgsz: Tuple[int, int],
 ) -> List[Dict[str, int]]:
+    """
+    It converts contours size to original shape
+    :param contours: contours to be resized
+    :param imgsz: image size before resize
+    :param target_imgsz: resired image size
+    :return: scaled contours
+    """
 
     ratio_height, ratio_width = (
         target_imgsz[1] / imgsz[1]
