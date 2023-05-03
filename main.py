@@ -1,20 +1,22 @@
 import os
+from pathlib import Path
 import cv2
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
-import PIL
-from utils.get_roi import resize, find_roi, get_thresh_img, get_blurred_img
+from utils.hyps import *
 
+font_path = Path("./fonts/NanumBarunGothic.ttf")
 plt.style.use("dark_background")
 target_pic_size = 720
-img_list = os.listdir("./images")
+img_list = os.listdir("./cropped")
 
 
 if __name__ == "__main__":
-    for img_name in img_list:
+    for i, img_name in enumerate(img_list):
         # img_ori = cv2.imread("Test.jpeg")
         # img_ori = cv2.imread("2018_04_16_73837_1527582857T73837S05M2018Y173417E320.jpg")
-        img_ori = cv2.imread(f"./images/{img_name}")
+        img_ori = cv2.imread(f"./cropped/{img_name}")
 
         """resize"""
         height, width, channel = img_ori.shape
@@ -42,25 +44,24 @@ if __name__ == "__main__":
         gray = cv2.subtract(imgGrayscalePlusTopHat, imgBlackHat)
 
         img_blurred = cv2.GaussianBlur(gray, ksize=(5, 5), sigmaX=0)
-
+        canny = cv2.Canny(img_blurred, CANNY_LOWER_THRESH, CANNY_UPPER_THRESH)
         # mode 1. normal threshold
-        # ret, binary = cv2.threshold(img_blurred, 127, 255, cv2.THRESH_BINARY)
-        # img_thresh = cv2.bitwise_not(binary)
+        ret, binary = cv2.threshold(img_blurred, 127, 255, cv2.THRESH_BINARY)
+        img_thresh = cv2.bitwise_not(binary)
 
         """get_thresh_img"""
         # mode 2. adaptive threshold
-        img_thresh = cv2.adaptiveThreshold(
-            img_blurred,
-            maxValue=255.0,
-            adaptiveMethod=cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            thresholdType=cv2.THRESH_BINARY_INV,
-            blockSize=19,
-            C=9,
-        )
+        # img_thresh = cv2.adaptiveThreshold(
+        #     img_blurred,
+        #     maxValue=255.0,
+        #     adaptiveMethod=cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        #     thresholdType=cv2.THRESH_BINARY_INV,
+        #     blockSize=19,
+        #     C=9,
+        # )
 
-        fig_thresh = plt.figure(figsize=(12, 10))
-        plt.imshow(img_thresh, cmap="gray")
-        plt.show()
+        cv2.imwrite(f"{img_name[:-4]}_canny.png", canny)
+        cv2.imwrite(f"{img_name[:-4]}_bin.png", img_thresh)
 
         contours, _ = cv2.findContours(
             img_thresh, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_SIMPLE
@@ -291,9 +292,9 @@ if __name__ == "__main__":
             plt.imshow(img_cropped, cmap="gray")
         plt.show()
 
-        img_1 = resize(img, target_pic_size)
-        img_1 = get_blurred_img(img_1)
-        img_1 = get_thresh_img(img_1)
-        plate_infos_2 = find_roi(img_1)
+        # img_1 = resize(img, target_pic_size)
+        # img_1 = get_blurred_img(img_1)
+        # img_1 = get_thresh_img(img_1)
+        # plate_infos_2 = find_roi(img_1)
 
         a = 1
